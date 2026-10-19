@@ -91,12 +91,20 @@ export const TelegramBotModal: React.FC<TelegramBotModalProps> = ({
     },
   ]);
 
-  const webAppUrl = typeof window !== 'undefined' ? window.location.origin : 'https://safarigame.app';
+  const DEFAULT_WEBAPP_URL = 'https://safari-games.vercel.app/';
+  const [targetWebAppUrl, setTargetWebAppUrl] = useState<string>(() => {
+    return localStorage.getItem('safari_bot_webapp_url') || DEFAULT_WEBAPP_URL;
+  });
+  const [isUpdatingUrl, setIsUpdatingUrl] = useState(false);
+  const [urlSuccessMessage, setUrlSuccessMessage] = useState<string | null>(null);
+
+  const webAppUrl = targetWebAppUrl;
 
   if (!isOpen) return null;
 
-  const handleCopyLink = () => {
-    navigator.clipboard.writeText(webAppUrl);
+  const handleCopyLink = (customUrl?: string) => {
+    const url = customUrl || targetWebAppUrl;
+    navigator.clipboard.writeText(url);
     setCopiedLink(true);
     triggerTelegramHaptic('notification', 'success');
     setTimeout(() => setCopiedLink(false), 2000);
@@ -105,7 +113,42 @@ export const TelegramBotModal: React.FC<TelegramBotModalProps> = ({
   const handleShare = () => {
     triggerTelegramHaptic('impact', 'medium');
     const text = '🚀 Play Safari Game Aviator & Chicken Road directly inside Telegram! Deposit via Telebirr (0932335247) and win big!';
-    shareOnTelegram(text, webAppUrl);
+    shareOnTelegram(text, targetWebAppUrl);
+  };
+
+  const handleUpdateBotUrl = async (urlToSet?: string) => {
+    const chosenUrl = (urlToSet || targetWebAppUrl).trim();
+    if (!chosenUrl) return;
+    setIsUpdatingUrl(true);
+    setUrlSuccessMessage(null);
+    setTokenError(null);
+    try {
+      localStorage.setItem('safari_bot_webapp_url', chosenUrl);
+      setTargetWebAppUrl(chosenUrl);
+      const res = await setBotMenuButton(botTokenInput.trim() || DEFAULT_TOKEN, chosenUrl);
+      if (res.ok) {
+        setMenuButtonSuccess(true);
+        setUrlSuccessMessage(
+          language === 'am'
+            ? 'የቴሌግራም ቦት Menu Button ወደ ' + chosenUrl + ' በተሳካ ሁኔታ ተገናኝቷል!'
+            : 'Telegram Bot Menu Button successfully updated to ' + chosenUrl
+        );
+        triggerTelegramHaptic('notification', 'success');
+        setTimeout(() => setUrlSuccessMessage(null), 4000);
+      } else {
+        setTokenError(res.description || 'Could not update Telegram Menu Button');
+        triggerTelegramHaptic('notification', 'error');
+      }
+    } catch {
+      setTokenError(
+        language === 'am'
+          ? 'ከቴሌግራም ጋር መገናኘት አልተቻለም። እባክዎ ኢንተርኔትዎን ያረጋግጡ።'
+          : 'Could not connect to Telegram API.'
+      );
+      triggerTelegramHaptic('notification', 'error');
+    } finally {
+      setIsUpdatingUrl(false);
+    }
   };
 
   // Bot Simulator Action Handler
@@ -554,18 +597,32 @@ bot.on('callback_query', (query) => {
 
             {/* WebApp Link Box */}
             <div className="bg-neutral-950 p-3.5 rounded-xl border border-neutral-800 space-y-2">
-              <span className="font-bold text-neutral-400 block uppercase">
-                {language === 'am' ? 'የጨዋታው ዌብ አድራሻ (WebApp URL)' : 'Your WebApp URL:'}
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-neutral-400 block uppercase text-[11px]">
+                  {language === 'am' ? 'የጨዋታው ዌብ አድራሻ (WebApp URL)' : 'Your WebApp URL:'}
+                </span>
+                <span className="text-[10px] text-emerald-400 font-mono bg-emerald-950/70 border border-emerald-800/80 px-2 py-0.5 rounded-full font-bold">
+                  ● Live on Vercel
+                </span>
+              </div>
               <div className="flex items-center gap-2 bg-neutral-900 border border-neutral-700/80 rounded-lg p-2 font-mono text-xs text-white">
-                <span className="truncate flex-1 text-sky-400">{webAppUrl}</span>
+                <span className="truncate flex-1 text-sky-400 font-semibold">{targetWebAppUrl}</span>
                 <button
-                  onClick={handleCopyLink}
+                  onClick={() => handleCopyLink(targetWebAppUrl)}
                   className="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded font-bold flex items-center gap-1 active:scale-95 transition cursor-pointer shrink-0"
                 >
                   {copiedLink ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                   <span>{copiedLink ? 'Copied' : 'Copy'}</span>
                 </button>
+                <a
+                  href={targetWebAppUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-700 text-neutral-300 rounded font-bold flex items-center gap-1 transition cursor-pointer shrink-0"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open</span>
+                </a>
               </div>
             </div>
 
@@ -781,6 +838,67 @@ bot.on('callback_query', (query) => {
                   )}
                 </div>
               )}
+
+              {/* Connected WebApp URL Card */}
+              <div className="p-3.5 bg-neutral-900/90 border border-neutral-800 rounded-xl space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 font-bold text-white text-xs">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>{language === 'am' ? 'በቦቱ ላይ የተገናኘው የዌብ አድራሻ (Connected WebApp)' : 'Connected Mini App URL'}</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 bg-emerald-950/70 border border-emerald-800/80 px-2 py-0.5 rounded-full font-bold">
+                    ✓ Vercel Connected
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={targetWebAppUrl}
+                    onChange={(e) => setTargetWebAppUrl(e.target.value)}
+                    placeholder="https://safari-games.vercel.app/"
+                    className="flex-1 bg-neutral-950 border border-neutral-700/80 rounded-lg px-3 py-1.5 text-xs text-sky-300 font-mono focus:outline-none focus:border-sky-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleUpdateBotUrl(targetWebAppUrl)}
+                    disabled={isUpdatingUrl}
+                    className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 disabled:opacity-50 text-white rounded-lg font-bold text-xs flex items-center gap-1 active:scale-95 transition cursor-pointer shrink-0"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isUpdatingUrl ? 'animate-spin' : ''}`} />
+                    <span>{language === 'am' ? 'አድስ (Sync)' : 'Sync to Bot'}</span>
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] pt-1 border-t border-neutral-800/60">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTargetWebAppUrl('https://safari-games.vercel.app/');
+                      handleUpdateBotUrl('https://safari-games.vercel.app/');
+                    }}
+                    className="text-sky-400 hover:text-sky-300 font-mono text-[10px] underline cursor-pointer"
+                  >
+                    ወደ https://safari-games.vercel.app/ መልስ
+                  </button>
+                  <a
+                    href={targetWebAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-emerald-400 hover:text-emerald-300 font-bold flex items-center gap-1 text-[11px]"
+                  >
+                    <span>ክፈት (Open Site)</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                {urlSuccessMessage && (
+                  <div className="text-[11px] text-emerald-300 bg-emerald-950/50 border border-emerald-800/60 p-2 rounded-lg flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>{urlSuccessMessage}</span>
+                  </div>
+                )}
+              </div>
 
               {/* Helpful Tips Card */}
               <div className="p-3 bg-neutral-900/70 border border-neutral-800 rounded-xl space-y-2 text-[11px] text-neutral-300">

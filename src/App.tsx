@@ -21,6 +21,8 @@ import { AdminPanelModal } from './components/AdminPanelModal';
 import { AuthModal } from './components/AuthModal';
 import { ChickenRoadGame } from './components/ChickenRoadGame';
 import { TelegramBotModal } from './components/TelegramBotModal';
+import { ReferralModal } from './components/ReferralModal';
+import { getRandomReferralBonus, detectReferralCodeFromContext, saveReferralRecord } from './utils/referral';
 import { initTelegramApp, isTelegramWebApp, triggerTelegramHaptic } from './utils/telegram';
 import { Lock, CheckCircle2, Clock } from 'lucide-react';
 
@@ -107,12 +109,16 @@ export default function App() {
   const [isHowToPlayOpen, setIsHowToPlayOpen] = useState(false);
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isTelegramBotOpen, setIsTelegramBotOpen] = useState(false);
+  const [isReferralOpen, setIsReferralOpen] = useState(false);
   const [isTelegram, setIsTelegram] = useState(false);
   const [selectedRoundForModal, setSelectedRoundForModal] = useState<PastRound | null>(null);
   const [statusToast, setStatusToast] = useState<{ message: string; type: 'success' | 'pending' | 'info' } | null>(null);
 
   // Auto-detect Telegram WebApp on mount & register user if in Telegram
   useEffect(() => {
+    // Detect any incoming referral parameter from URL or Telegram
+    const pendingRef = detectReferralCodeFromContext();
+
     const inTg = isTelegramWebApp();
     setIsTelegram(inTg);
 
@@ -126,10 +132,18 @@ export default function App() {
           fullName: `${tgUser.first_name || ''} ${tgUser.last_name || ''}`.trim() || tgUser.username || `TG_Player_${tgUser.id}`,
           phoneNumber: tgUser.username ? `@${tgUser.username}` : `TG-${tgUser.id}`,
           registeredAt: Date.now(),
+          referredBy: pendingRef || undefined,
         };
         setCurrentUser(tgProfile);
         localStorage.setItem('safari_current_user', JSON.stringify(tgProfile));
         setIsAuthModalOpen(false);
+
+        // If joined with referral, trigger welcome bonus (1 to 5 ETB)
+        if (pendingRef) {
+          setTimeout(() => {
+            handleClaimReferralBonus(getRandomReferralBonus(), pendingRef, tgProfile.fullName);
+          }, 1000);
+        }
       }
     }
   }, []);
@@ -611,6 +625,62 @@ export default function App() {
     soundManager.setMuted(nextMuted);
   };
 
+  // Claim or Apply Referral Bonus (1 to 5 ETB reward)
+  const handleClaimReferralBonus = (bonusAmount: number, referralCode: string, referredName?: string) => {
+    // 1. Credit Real Balance
+    setRealBalance((prev) => Number((prev + bonusAmount).toFixed(2)));
+
+    // 2. Add Transaction record
+    const refTx: Transaction = {
+      id: `ref-${Date.now()}`,
+      type: 'DEPOSIT',
+      method: 'voucher',
+      methodName: '🎁 ሪፈራል ቦነስ (Referral Reward)',
+      amount: bonusAmount,
+      currency,
+      status: 'APPROVED',
+      timestamp: Date.now(),
+      referenceNumber: `REF-${Math.floor(100000 + Math.random() * 900000)}`,
+      senderPhone: referralCode,
+      note: `የሪፈራል ስጦታ (${referralCode})`,
+    };
+    setTransactions((prev) => [refTx, ...prev]);
+
+    // 3. Credit inviter if registered
+    try {
+      const savedUsers: UserProfile[] = JSON.parse(localStorage.getItem('safari_users') || '[]');
+      const inviter = savedUsers.find((u) => {
+        const code = u.referralCode || `SAFARI${u.phoneNumber.replace(/\D/g, '').slice(-4)}`;
+        return code.toUpperCase() === referralCode.toUpperCase();
+      });
+
+      if (inviter) {
+        const inviterBonus = getRandomReferralBonus();
+        saveReferralRecord(inviter.id, {
+          id: `rec-${Date.now()}`,
+          referredUserId: currentUser?.id || 'new_player',
+          referredName: referredName || currentUser?.fullName || 'Safari Friend',
+          amountEarned: inviterBonus,
+          timestamp: Date.now(),
+        });
+      }
+    } catch (e) {
+      console.warn('Inviter credit notice:', e);
+    }
+
+    localStorage.setItem('safari_has_claimed_ref', 'true');
+    localStorage.removeItem('safari_pending_ref');
+
+    soundManager.playCashout();
+    confetti({ particleCount: 75, spread: 70, origin: { y: 0.6 } });
+
+    setStatusToast({
+      message: `🎉 እንኳን ደስ አለዎት! ${bonusAmount.toFixed(2)} ${currency} የሪፈራል ቦነስ ወደ ዋና ሂሳብዎ ገቢ ተደርጓል!`,
+      type: 'success',
+    });
+    setTimeout(() => setStatusToast(null), 5000);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('safari_current_user');
     setCurrentUser(null);
@@ -633,6 +703,7 @@ export default function App() {
         currentUser={currentUser}
         isTelegram={isTelegram}
         onOpenTelegramBot={() => setIsTelegramBotOpen(true)}
+        onOpenReferral={() => setIsReferralOpen(true)}
         onSelectGame={(game) => setActiveGame(game)}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
@@ -777,11 +848,15 @@ export default function App() {
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={(user) => {
           setCurrentUser(user);
-          setStatusToast({
-            message: `እንኳን ደህና መጡ ${user.fullName}! አካውንትዎ በተሳካ ሁኔታ ተከፍቷል::`,
-            type: 'success',
-          });
-          setTimeout(() => setStatusToast(null), 5000);
+          if (user.referredBy) {
+            handleClaimReferralBonus(getRandomReferralBonus(), user.referredBy, user.fullName);
+          } else {
+            setStatusToast({
+              message: `እንኳን ደህና መጡ ${user.fullName}! አካውንትዎ በተሳካ ሁኔታ ተከፍቷል::`,
+              type: 'success',
+            });
+            setTimeout(() => setStatusToast(null), 5000);
+          }
         }}
         canDismiss={currentUser !== null}
       />
@@ -841,6 +916,17 @@ export default function App() {
         telebirrPhone={adminSettings.telebirrReceiverPhone}
         onOpenDeposit={() => setIsDepositOpen(true)}
         onSelectGame={(game) => setActiveGame(game)}
+      />
+
+      {/* Referral Program Modal (1 to 5 ETB) */}
+      <ReferralModal
+        isOpen={isReferralOpen}
+        onClose={() => setIsReferralOpen(false)}
+        currentUser={currentUser}
+        currency={currency}
+        language={language}
+        onClaimReferralBonus={(bonus, code) => handleClaimReferralBonus(bonus, code)}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
       />
     </div>
   );

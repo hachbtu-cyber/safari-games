@@ -8,7 +8,7 @@
  */
 
 const BOT_TOKEN = process.env.BOT_TOKEN || '8806462637:AAHUn6nU3OsugLXby_Cjx9ZIlTK9AnZWXks';
-const WEB_APP_URL = process.env.APP_URL || 'https://ais-pre-qch5b7g5osydcuvmdrh4mf-49011619423.europe-west2.run.app';
+const WEB_APP_URL = process.env.OVERRIDE_WEB_APP_URL || 'https://safari-games.vercel.app/';
 const TELEBIRR_NUMBER = '0932335247';
 
 console.log('----------------------------------------------------');
@@ -67,22 +67,53 @@ async function startPolling() {
               const sender = u.message.from?.first_name || 'ተጫዋች';
 
               if (text.startsWith('/start')) {
+                const parts = text.split(' ');
+                const startParam = parts.length > 1 ? parts[1].trim() : '';
+                const hasReferral = Boolean(startParam);
+
+                const welcomeText = hasReferral
+                  ? `👋 ሰላም ${sender}!\n\n🎁 **እንኳን ደህና መጡ! በጓደኛዎ ተጋብዘዋል!**\nበ Safari Game ሲመዘገቡ ከ 1 እስከ 5 ብር ፈጣን ቦነስ ያገኛሉ!\n\n🌐 **ይፋዊ ዌብሳይት**: ${WEB_APP_URL}\n💰 **የቴሌብር ቁጥር**: \`${TELEBIRR_NUMBER}\``
+                  : `👋 ሰላም ${sender}!\n\nወደ **Safari Game** Aviator & Chicken Road ቦት እንኳን ደህና መጡ!\n\n🇪🇹 በኢትዮጵያ ፈጣኑ እና አስተማማኙ የክራሽ (Crash) እና የዶሮ መንገድ ጨዋታ።\n🎁 **ጓደኛ በመጋበዝ ከ 1 እስከ 5 ብር ቦነስ ያግኙ!**\n\n🌐 **ይፋዊ ዌብሳይት**: ${WEB_APP_URL}\n💰 **የቴሌብር ቁጥር**: \`${TELEBIRR_NUMBER}\``;
+
                 await tgRequest('sendMessage', {
                   chat_id: chatId,
-                  text: `👋 ሰላም ${sender}!\n\nወደ **Safari Game** Aviator & Chicken Road ቦት እንኳን ደህና መጡ!\n\n🇪🇹 በኢትዮጵያ ፈጣኑ እና አስተማማኙ የክራሽ (Crash) እና የዶሮ መንገድ ጨዋታ።\n\n💰 **የቴሌብር ቁጥር**: \`${TELEBIRR_NUMBER}\`\n\nጨዋታውን ለመጀመር ከታች ያለውን አዝራር ይጫኑ:`,
+                  text: welcomeText,
                   parse_mode: 'Markdown',
                   reply_markup: {
                     inline_keyboard: [
                       [{ text: '🎮 Safari Game ጀምር (Mini App)', web_app: { url: WEB_APP_URL } }],
                       [
-                        { text: '💰 ቴሌብር ተቀማጭ', callback_data: 'DEPOSIT' },
+                        { text: '🎁 ሪፈራል (ከ 1-5 ብር ያግኙ)', callback_data: 'REFERRAL' },
                         { text: '🐔 Chicken Road', web_app: { url: WEB_APP_URL } }
                       ],
                       [
-                        { text: '📤 ጓደኛ ጋብዝ (Share)', switch_inline_query: 'Play Safari Game Aviator & Chicken Road!' }
+                        { text: '💰 ቴሌብር ተቀማጭ', callback_data: 'DEPOSIT' },
+                        { text: '📤 ጓደኛ ጋብዝ', switch_inline_query: `🦁 በሳፋሪ ጌም አቪዬተርና ቺከን ሮድ ይጫወቱ! በኔ ሊንክ ሲገቡ ከ 1 እስከ 5 ብር ቦነስ ያገኛሉ: ${WEB_APP_URL}?ref=ref_${chatId}` }
                       ]
                     ],
                   },
+                });
+              } else if (text.startsWith('/referral')) {
+                const refLink = `https://t.me/SafariGameOfficial_bot?startapp=ref_${chatId}`;
+                const webRefLink = `${WEB_APP_URL}?ref=ref_${chatId}`;
+
+                await tgRequest('sendMessage', {
+                  chat_id: chatId,
+                  text: `🎁 **የሳፋሪ ጌም የሪፈራል ፕሮግራም (1.00 - 5.00 ETB)**\n\nለእያንዳንዱ ለሚጋብዙት ጓደኛ **ከ 1 ብር እስከ 5 ብር** ፈጣን ቦነስ በቀጥታ ወደ ዋና ዋሌትዎ ገቢ ይደረጋል!\n\n🔗 **የእርስዎ መጋበዣ ሊንክ (Telegram Bot)**:\n\`${refLink}\`\n\n🌐 **የዌብሳይት ሊንክ (Direct Web)**:\n\`${webRefLink}\`\n\nጓደኞችዎ በእርስዎ ሊንክ ሲመዘገቡ ወዲያውኑ ቦነሱ ወደ ሂሳብዎ ይገባል!`,
+                  parse_mode: 'Markdown',
+                  reply_markup: {
+                    inline_keyboard: [
+                      [
+                        { 
+                          text: '📤 ለጓደኛ አጋራ (Share Link)', 
+                          switch_inline_query: `🦁 በሳፋሪ ጌም አቪዬተርና ቺከን ሮድ ይጫወቱ! በኔ ሊንክ ሲገቡ ከ 1 እስከ 5 ብር ቦነስ ያገኛሉ: ${webRefLink}` 
+                        }
+                      ],
+                      [
+                        { text: '🎮 ወደ ጨዋታው ግባ (Play Now)', web_app: { url: WEB_APP_URL } }
+                      ]
+                    ]
+                  }
                 });
               } else if (text.startsWith('/deposit')) {
                 await tgRequest('sendMessage', {
@@ -98,11 +129,30 @@ async function startPolling() {
               }
             } else if (u.callback_query) {
               const query = u.callback_query;
+              const chatId = query.message?.chat?.id;
+
               if (query.data === 'DEPOSIT') {
                 await tgRequest('sendMessage', {
-                  chat_id: query.message.chat.id,
+                  chat_id: chatId,
                   text: `💳 የቴሌብር ቁጥር: **${TELEBIRR_NUMBER}**\nገንዘቡን ከላኩ በኋላ በ Mini App ውስጥ ያለውን የተጠቃሚ ቅጽ ይሙሉ!`,
                   parse_mode: 'Markdown',
+                });
+              } else if (query.data === 'REFERRAL') {
+                const refLink = `https://t.me/SafariGameOfficial_bot?startapp=ref_${chatId}`;
+                const webRefLink = `${WEB_APP_URL}?ref=ref_${chatId}`;
+
+                await tgRequest('sendMessage', {
+                  chat_id: chatId,
+                  text: `🎁 **የሪፈራል ቦነስ (1 - 5 ETB)**:\n\nለእያንዳንዱ ለጋበዙት ሰው ከ 1 እስከ 5 ብር ቦነስ ያግኙ!\n\nየእርስዎ ሊንክ:\n\`${refLink}\`\nወይም:\n\`${webRefLink}\``,
+                  parse_mode: 'Markdown',
+                  reply_markup: {
+                    inline_keyboard: [
+                      [{ 
+                        text: '📤 አሁኑኑ አጋራ (Share)', 
+                        switch_inline_query: `🦁 በሳፋሪ ጌም አቪዬተርና ቺከን ሮድ ይጫወቱ! በኔ ሊንክ ሲገቡ ከ 1 እስከ 5 ብር ቦነስ ያገኛሉ: ${webRefLink}` 
+                      }]
+                    ]
+                  }
                 });
               }
             }

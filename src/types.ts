@@ -74,12 +74,22 @@ export interface AdminSettings {
   aviatorCrashAggression: 'HIGH' | 'BALANCED' | 'FAIR';
 }
 
+export interface ReferralRecord {
+  id: string;
+  referredUserId: string;
+  referredName: string;
+  amountEarned: number; // 1 to 5 ETB
+  timestamp: number;
+}
+
 export interface UserProfile {
   id: string;
   fullName: string;
   phoneNumber: string;
   password?: string;
   registeredAt: number;
+  referralCode?: string;
+  referredBy?: string;
 }
 
 export type ActiveGame = 'AVIATOR' | 'CHICKEN_ROAD';

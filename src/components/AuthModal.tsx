@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   X, UserPlus, LogIn, Phone, Lock, User, 
-  ShieldCheck, AlertCircle, Sparkles, CheckCircle2 
+  ShieldCheck, AlertCircle, Sparkles, CheckCircle2, Gift
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { soundManager } from '../utils/sound';
@@ -24,6 +24,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCodeInput, setReferralCodeInput] = useState<string>(() => {
+    return localStorage.getItem('safari_pending_ref') || '';
+  });
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -57,17 +60,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
+    const cleanRefCode = referralCodeInput.trim().toUpperCase();
+
     const newUser: UserProfile = {
       id: `usr-${Date.now()}`,
       fullName: fullName.trim(),
       phoneNumber: cleanPhone,
       password,
       registeredAt: Date.now(),
+      referredBy: cleanRefCode || undefined,
     };
 
     savedUsers.push(newUser);
     localStorage.setItem('safari_users', JSON.stringify(savedUsers));
     localStorage.setItem('safari_current_user', JSON.stringify(newUser));
+    localStorage.removeItem('safari_pending_ref');
 
     soundManager.playCashout();
     confetti({ particleCount: 60, spread: 60, origin: { y: 0.6 } });
@@ -230,6 +237,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     className="w-full bg-transparent text-sm text-white outline-none"
                   />
                 </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-bold text-neutral-300 flex items-center gap-1.5">
+                    <Gift className="w-3.5 h-3.5 text-amber-400" />
+                    <span>የሪፈራል ኮድ (Referral Code) - አማራጭ</span>
+                  </label>
+                  <span className="text-[10px] text-amber-400 font-bold bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-800">
+                    🎁 1 - 5 ETB ቦነስ
+                  </span>
+                </div>
+                <div className="flex items-center bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2.5 focus-within:border-amber-500 transition">
+                  <Gift className="w-4 h-4 text-neutral-500 mr-2" />
+                  <input
+                    type="text"
+                    value={referralCodeInput}
+                    onChange={(e) => setReferralCodeInput(e.target.value.toUpperCase())}
+                    placeholder="ምሳሌ: SAFARI1234"
+                    className="w-full bg-transparent text-sm font-mono text-white outline-none uppercase placeholder-neutral-600"
+                  />
+                </div>
+                <span className="text-[10px] text-neutral-500 mt-0.5 block">
+                  ጓደኛ ጋብዞዎት ከሆነ ኮዱን በማስገባት ከ 1 እስከ 5 ብር ፈጣን ቦነስ ያግኙ!
+                </span>
               </div>
 
               <div className="p-3 bg-neutral-950 rounded-xl border border-neutral-800 text-[11px] text-neutral-400">

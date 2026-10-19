@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
   Volume2, VolumeX, HelpCircle, ShieldCheck, 
-  Wallet, RefreshCw, PlusCircle, Globe, User, LogOut, Sparkles, Send
+  Wallet, RefreshCw, PlusCircle, Globe, User, LogOut, Sparkles, Gift
 } from 'lucide-react';
 import { Currency, ActiveGame, UserProfile } from '../types';
 
@@ -14,8 +14,9 @@ interface HeaderProps {
   language: 'en' | 'am';
   activeGame: ActiveGame;
   currentUser: UserProfile | null;
-  isTelegram: boolean;
-  onOpenTelegramBot: () => void;
+  isTelegram?: boolean;
+  onOpenTelegramBot?: () => void;
+  onOpenReferral?: () => void;
   onSelectGame: (game: ActiveGame) => void;
   onOpenAuth: () => void;
   onLogout: () => void;
@@ -39,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   currentUser,
   isTelegram,
   onOpenTelegramBot,
+  onOpenReferral,
   onSelectGame,
   onOpenAuth,
   onLogout,
@@ -157,11 +159,26 @@ export const Header: React.FC<HeaderProps> = ({
 
           <button
             onClick={onOpenDeposit}
-            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-neutral-950 font-black text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 rounded-md shadow-md active:scale-95 transition"
+            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-500 to-green-600 hover:brightness-110 text-neutral-950 font-black text-xs sm:text-sm px-2.5 sm:px-3 py-1.5 rounded-md shadow-md active:scale-95 transition cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5 stroke-[2.5]" />
             <span>{language === 'am' ? 'ተቀማጭ' : 'DEPOSIT'}</span>
           </button>
+
+          {/* Referral Program Button */}
+          {onOpenReferral && (
+            <button
+              onClick={onOpenReferral}
+              className="flex items-center gap-1.5 bg-gradient-to-r from-amber-500 via-orange-500 to-red-600 hover:brightness-110 text-white font-black text-xs sm:text-xs px-2.5 sm:px-3 py-1.5 rounded-md shadow-md active:scale-95 transition cursor-pointer border border-amber-300/30"
+              title={language === 'am' ? 'ጓደኛ ይጋብዙና ከ 1 እስከ 5 ብር ቦነስ ያግኙ!' : 'Refer Friends & Earn 1-5 ETB!'}
+            >
+              <Gift className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
+              <span>{language === 'am' ? 'ሪፈራል' : 'REFERRAL'}</span>
+              <span className="bg-black/40 text-amber-300 text-[10px] font-black px-1.5 py-0.5 rounded-full border border-amber-400/40">
+                1-5 ብር
+              </span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -199,19 +216,6 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         )}
 
-        {/* Telegram Bot TMA button */}
-        <button
-          onClick={onOpenTelegramBot}
-          className={`px-2 py-1 text-xs font-bold rounded-lg flex items-center gap-1.5 transition border ${
-            isTelegram
-              ? 'bg-sky-500 text-neutral-950 border-sky-400 shadow-sm'
-              : 'bg-sky-950/60 hover:bg-sky-900/60 text-sky-400 border-sky-800/60'
-          }`}
-          title="Telegram Bot & Mini App"
-        >
-          <Send className="w-3.5 h-3.5 -rotate-12" />
-          <span className="hidden sm:inline">{isTelegram ? 'TG APP' : 'TELEGRAM'}</span>
-        </button>
 
         {/* Language switch */}
         <button
