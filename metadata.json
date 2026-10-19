@@ -1,0 +1,6 @@
+{
+  "name": "Safari Game - Aviator Crash Casino",
+  "description": "High-octane Safari Game Aviator crash casino experience with dual betting panels, live flight multiplier, deposit cashier with Telebirr & CBE, round history, and multiplayer lobby.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
